@@ -55,3 +55,7 @@ next-env.d.ts
 /outputs/
 /work/
 *.tsbuildinfo
+.dev.vars*
+/.deployment/
+!/build/worker.ts
+!/build/local-auth.ts

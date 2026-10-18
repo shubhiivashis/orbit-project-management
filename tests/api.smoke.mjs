@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 const origin = process.env.ORBIT_TEST_URL ?? "http://localhost:5173";
 if (!["localhost", "127.0.0.1"].includes(new URL(origin).hostname))
   throw new Error("Smoke tests only run against a local preview.");
-const cookie = { Cookie: "__sites_local_auth=1" };
+const cookie = { Cookie: "__orbit_local_auth=1" };
 async function req(method, body, auth = cookie) {
   const r = await fetch(origin + "/api/workspace", {
     method,
@@ -14,12 +14,7 @@ async function req(method, body, auth = cookie) {
   });
   return { status: r.status, data: await r.json() };
 }
-const owner = process.env.ORBIT_BUILT_TEST
-  ? {
-      "oai-authenticated-user-id": "local_seedy",
-      "oai-authenticated-user-email": "seedy@sites.test",
-    }
-  : cookie;
+const owner = cookie;
 let project;
 try {
   assert.equal((await req("GET", null, {})).status, 401);
@@ -222,14 +217,10 @@ try {
     400,
   );
   console.log("PASS invalid input and impossible dates rejected");
-  if (process.env.ORBIT_BUILT_TEST) {
-    const outsider = {
-      "oai-authenticated-user-id": "outsider-test",
-      "oai-authenticated-user-email": "outsider@orbit.test",
-    };
+  {
+    const outsider = { Cookie: "__orbit_local_auth=outsider" };
     assert.equal((await req("GET", null, outsider)).status, 403);
-    const email = `qa-${Date.now()}@orbit.test`,
-      uid = "test-user-" + Date.now();
+    const email = "teammate@orbit.local";
     assert.equal(
       (
         await req(
@@ -240,10 +231,7 @@ try {
       ).status,
       200,
     );
-    const teammate = {
-      "oai-authenticated-user-id": uid,
-      "oai-authenticated-user-email": email,
-    };
+    const teammate = { Cookie: "__orbit_local_auth=teammate" };
     const joined = await req("GET", null, teammate);
     assert.equal(joined.status, 200);
     const mid = joined.data.me;

@@ -15,4 +15,5 @@ jobs:
           cache: npm
       - run: npm run install:ci
       - run: npm run check
+      - run: npm run test:auth
       - run: npm run build

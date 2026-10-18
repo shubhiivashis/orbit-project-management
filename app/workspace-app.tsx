@@ -423,7 +423,7 @@ export default function WorkspaceApp({
             >
               Try again
             </button>
-            <a href="/signout-with-chatgpt?return_to=/" target="_top">
+            <a href="/auth/logout" target="_top">
               Switch account
             </a>
           </>
@@ -1383,7 +1383,7 @@ export default function WorkspaceApp({
                   <h3>Bring your team into the workspace</h3>
                   <p>
                     Add each person’s sign-in email here, then grant them access
-                    through the Site’s sharing controls. They’ll join this
+                    through the Cloudflare Access policy. They’ll join this
                     workspace when they sign in with that email. Adding a member
                     does not send an email invitation.
                   </p>
@@ -1500,11 +1500,7 @@ export default function WorkspaceApp({
                 </div>
                 <hr />
                 <h2>Account</h2>
-                <a
-                  className="btn"
-                  href="/signout-with-chatgpt?return_to=/"
-                  target="_top"
-                >
+                <a className="btn" href="/auth/logout" target="_top">
                   Sign out
                 </a>
               </section>
@@ -1708,7 +1704,7 @@ export default function WorkspaceApp({
               ) {
                 close();
                 setNotice(
-                  "Teammate added. Grant Site access to let them join.",
+                  "Teammate added. Grant Cloudflare Access permission to let them join.",
                 );
               }
             }}
@@ -1736,7 +1732,8 @@ export default function WorkspaceApp({
               />
             </label>
             <p className="muted">
-              Also grant access in Site sharing. No email is sent by this form.
+              Also grant access in Cloudflare Access. No email is sent by this
+              form.
             </p>
             {error && (
               <p role="alert" className="form-error">

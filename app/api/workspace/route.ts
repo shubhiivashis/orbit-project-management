@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getUser } from "../../auth";
 import { z } from "zod";
 const id = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
@@ -44,7 +44,7 @@ const taskInput = z
 const json = (data: unknown, status = 200) =>
   Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
 async function access() {
-  const user = await getChatGPTUser();
+  const user = await getUser();
   if (!user) throw new Error("401:Sign in to continue.");
   if (!env.DB) throw new Error("503:The workspace database is not connected.");
   const db = env.DB;
@@ -73,6 +73,17 @@ async function access() {
   if (await db.prepare("SELECT id FROM workspace LIMIT 1").first())
     throw new Error(
       "403:Ask the workspace owner to add your email to the team.",
+    );
+  const ownerEmail =
+    env.ORBIT_OWNER_EMAIL?.trim().toLowerCase() ||
+    (import.meta.env.DEV ? "owner@orbit.local" : "");
+  if (!ownerEmail)
+    throw new Error(
+      "503:The owner must configure ORBIT_OWNER_EMAIL before creating the workspace.",
+    );
+  if (user.email.toLowerCase() !== ownerEmail)
+    throw new Error(
+      "403:The configured owner must create this workspace first.",
     );
   return { db, user, member: null };
 }

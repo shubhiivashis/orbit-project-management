@@ -1,63 +1,52 @@
-# Orbit
+# Orbit — independent Cloudflare edition
 
-An Asana-inspired project management app for one team, with original branding and UI.
+Team project management with projects, tasks/subtasks, assignments, comments, dependencies, board/list/calendar/timeline views, activity, and data exports.
 
-## Features
+Orbit runs on **Cloudflare Workers + D1 + Cloudflare Access**. Teammates use their approved email address and an email one-time PIN (or your Access identity provider). A ChatGPT account is not required.
 
-- Workspace onboarding and authenticated team access.
-- Projects: create, edit, and owner-confirmed deletion.
-- Task board with drag-and-drop, list, calendar, and four-week timeline.
-- Task creation, editing and deletion; assignments, priorities, dates, tags, subtasks, and dependencies.
-- Comments, team activity, personal tasks, progress dashboard, search, filters, and sorting.
-- Owner-managed email membership; pending members can be assigned tasks before joining.
-- Shared Cloudflare D1 storage, server-side validation, same-origin write checks, and optimistic task version checks.
-- CSV task exports and JSON workspace downloads.
-- Responsive interface, keyboard shortcuts (`/` search, `n` new task), labeled forms and keyboard-operable dialogs.
+## Run locally
 
-## Local development
-
-Requires Node.js 22.13+ and npm. On Windows use `npm.cmd` if PowerShell blocks npm.ps1.
+Requires Node.js 24 and npm. On Windows use `npm.cmd` if PowerShell blocks `npm.ps1`.
 
 ```sh
 npm run install:ci
-npm run build
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_yummy_chronomancer.sql
+npm run db:migrate:local
 npm run dev
 ```
 
-Open the printed local URL and sign in using the local development sign-in screen. The portable starter simulates `seedy@sites.test` for loopback development only. Create a workspace and optionally load the sample website-redesign project. Local test data lives in ignored `.wrangler/state`; it is not deployed or committed.
+Open `http://127.0.0.1:5173/auth/sign-in`. This signs into a loopback-only development account, `owner@orbit.local`. Development identities and their cookie middleware are excluded from production. Local storage is separate from the deployed database.
 
 ```sh
-npx tsc --noEmit
-node tests/api.smoke.mjs
+npm run check
+npm run test:auth
+npm test
+npm run build
 ```
 
-The smoke test requires the local dev server on port 5173 and a workspace owned by the local development account. It creates its own temporary project and cleans it up. It refuses remote URLs.
+`npm test` requires the dev server to be running. It creates a temporary project, checks persistence and owner/member authorization, and removes its test project. It refuses non-local URLs.
 
-## Deployment and team onboarding
+## Publish
 
-This app uses Sites hosting, Cloudflare Workers, D1, and the starter's ChatGPT authentication integration. `.openai/hosting.json` stores the existing Site identity and `DB` binding. Preserve the original Site identity when publishing updates. The supported Sites workflow syncs source, packages build output, applies migrations, and publishes a private version.
+See [Cloudflare deployment guide](docs/CLOUDFLARE-DEPLOY.md).
 
-1. Deploy the app privately, then sign in as its owner and create the workspace.
-2. Add teammates by their exact ChatGPT sign-in email under Team members.
-3. Separately grant those people access through Site sharing controls.
-4. Share the deployed URL yourself. The app does not send invitation emails.
+1. Use the configured D1 database `orbit-db`. For another account, update the account/database IDs in `wrangler.json`.
+2. Connect this GitHub repository to a Cloudflare **Worker**, not a Pages static project.
+3. Set the build command to `npm run build` and the deploy command to `npm run deploy`. The build token needs D1 Edit permission for migrations.
+4. Configure Cloudflare Access for the entire Worker hostname, enable email PIN login, and allow the owner's email initially.
+5. In the Worker's runtime variables set `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`, and `ORBIT_OWNER_EMAIL`.
+6. Open the URL and create the workspace as the configured owner.
+7. Add each teammate in Orbit and in the Cloudflare Access allow policy.
 
-Only the owner can add or remove membership or delete a project. All admitted team members share the projects and can edit tasks and comments. This is one team workspace per deployment; it is not a multi-tenant SaaS.
+The deploy script applies pending schema migrations before publishing the built Worker. The app rejects requests while Access configuration is missing and validates the JWT signature, issuer, audience, expiry, and person identity on every production request. It does not trust incoming application identity headers. Static assets also pass through the Worker. Preview URLs are disabled by default.
 
-The production server trusts the authentication headers supplied by Sites dispatch. A standalone deployment must provide a trusted authentication gateway that strips client-supplied identity headers; do not expose the raw Worker as an unauthenticated public origin.
+Runtime variables are managed in the Cloudflare dashboard; `keep_vars` preserves them across deployments. Never commit tokens, `.dev.vars`, `.env`, local databases, or authentication cookies. The `.openai/hosting.json` file is retained only as historical metadata and is not used by the Cloudflare build.
 
-## Product boundaries
+## Team permissions
 
-This is a working first version, not exhaustive Asana feature parity. It does not include billing, SSO, file attachments, outbound email, recurring tasks, custom automation rules, private per-project permissions, or real-time push. Team views refresh every 30 seconds. The timeline shows a fixed four-week window. The JSON download is an export; restoration is not implemented.
+Only `ORBIT_OWNER_EMAIL` can create an empty workspace. Once provisioned, the owner can add/remove/restore team members, rename the workspace, and delete projects. Admitted members share all projects and can work on tasks and comments. Membership removal blocks app access, unassigns tasks, and preserves comment history. Remove that email from Access as well when revoking platform access.
 
-## Structure
+## Limits of this version
 
-- `app/workspace-app.tsx`: client interface and view state.
-- `app/api/workspace/route.ts`: authenticated workspace API and validation.
-- `db/schema.ts`: Drizzle schema.
-- `drizzle/`: committed D1 schema migrations.
-- `app/chatgpt-auth.ts`: Sites authentication helpers.
-- `build/` and `scripts/`: portable Sites framework/deployment integration.
+One workspace per deployment. No billing, SSO management UI, file uploads, recurring tasks, automated workflows, private per-project permissions, or real-time push. Views refresh every 30 seconds. The timeline uses a four-week window. JSON/CSV exports are supported; restoration is not implemented.
 
-No Asana source code or proprietary assets are included. This project is independent of Asana.
+This project uses original branding and contains no Asana source code or proprietary assets.
